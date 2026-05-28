@@ -196,15 +196,18 @@ const NPCS=[
  {id:'dj2',name:'DJ — Scène secondaire',type:'staff',...P(24,24),
   st:{body:'#20242a',hair:'#888',phones:1},
   lines:["Bienvenue sur la petite scène.","Ici c'est plus deep. Plus intime. On pleure un peu.","127 BPM. On respire. C'est beau, hein."]},
- {id:'sabine',name:'SABINE — Bar',type:'staff',...P(3,20),
+ {id:'sabine',name:'SABINE — Bar',type:'bar',...P(3,20),
   st:{body:'#0d0d0d',hair:'#7a1f1f'},
-  lines:["Club Mate, eau, ou bière chaude ?","La bière est chaude : le frigo aussi fait la fête.","Cash uniquement. Et un sourire. Surtout le cash."]},
- {id:'uschi',name:'USCHI — Bar extérieur',type:'staff',...P(48,5),
+  lines:["Club Mate, eau, ou bière chaude ?","La bière est chaude : le frigo aussi fait la fête.","Cash uniquement. Et un sourire. Surtout le cash."],
+  choices:[{l:'🍺 Bière',go:buyBeer},{l:'💧 Eau',go:buyWater},{l:'Rien',go:()=>"« Reviens quand t'as soif, le poisson. »"}]},
+ {id:'uschi',name:'USCHI — Bar extérieur',type:'bar',...P(48,5),
   st:{body:'#155',hair:'#d8c070',bun:1},
-  lines:["Spritz ? Mate-Spritz ? Spritz-Spritz ?","Dehors on sert que des trucs qui finissent en -spritz.","Une paille ? T'as pas de mains. Bon. Santé."]},
- {id:'mama',name:'MAMA — Toilettes',type:'staff',...P(21,5),
+  lines:["Spritz ? Mate-Spritz ? Spritz-Spritz ?","Dehors on sert que des trucs qui finissent en -spritz.","Une paille ? T'as pas de mains. Bon. Santé."],
+  choices:[{l:'🍺 Spritz',go:buyBeer},{l:'💧 Eau',go:buyWater},{l:'Rien',go:()=>"« La nuit est jeune. Enfin... plus trop. »"}]},
+ {id:'mama',name:'MAMA — Toilettes',type:'bar',...P(21,5),
   st:{body:'#d24a7a',hair:'#fff',glasses:1,glitter:1},
-  lines:["Bonbon ? Chewing-gum ? Parfum ? Câlin ?","Je tiens ces toilettes depuis 1999, mein Schatz.","Bois de l'eau. BOIS. DE. L'EAU.","(elle te met de la paillette sur le front)"]},
+  lines:["Bonbon ? Chewing-gum ? Parfum ? Câlin ?","Je tiens ces toilettes depuis 1999, mein Schatz.","Bois de l'eau. BOIS. DE. L'EAU."],
+  choices:[{l:'💧 Eau (offerte)',go:buyWater},{l:'Merci Mama',go:()=>"« Va t'amuser. Et reviens boire, hein. » (elle te met de la paillette)"}]},
  {id:'lothar',name:'LOTHAR — Le Sauna',type:'staff',...P(47,27),
   st:{body:'#caa07c',hair:'#aaa',towel:1},
   lines:["88 degrés. La serviette est obligatoire.","Toi t'as des écailles — ça compte comme tenue.","Verse un peu d'eau sur les pierres. Respire. Existe.","Ici : pas de téléphone, pas de temps. Juste la vapeur."]},
@@ -248,13 +251,11 @@ const NPCS=[
  {id:'schatzi',name:'« SCHATZI »',type:'dealer',...P(30,20),
   st:{body:'#111',hair:'#000',hood:1,glasses:1},
   lines:["Psst. Le poisson. Viens par là.","J'ai... des petites choses. Pour la nuit.","Mais d'abord : t'as bu de l'eau, toi ?"],
-  choices:[{l:'Acheter',go:deal("« Bon. Vas-y mollo. Et BOIS DE L'EAU. Vraiment. »")},
-           {l:'Refuser',go:()=>"« Sage décision. Tiens, un bonbon normal alors. »"}]},
+  choices:[{l:'💊 Acheter',go:buyDrug},{l:'Refuser',go:()=>"« Sage. Tiens, un bonbon normal alors. »"}]},
  {id:'murat',name:'MURAT',type:'dealer',...P(35,6),
   st:{body:'#1a3a2a',cap:'#222'},
   lines:["Hé. Ça va, toi ? Besoin de quelque chose ?","Je vends surtout des chewing-gums et des conseils de vie.","...et autre chose, si tu insistes. Mais l'eau d'abord."],
-  choices:[{l:'Acheter',go:deal("« Doucement, le poisson. La nuit est longue. De l'eau. »")},
-           {l:'Refuser',go:()=>"« Respect. Prends une menthe au moins. »"}]},
+  choices:[{l:'💊 Acheter',go:buyDrug},{l:'Refuser',go:()=>"« Respect. Prends une menthe au moins. »"}]},
  // FREAKS (à éviter)
  {id:'amateur',name:'LE DJ AMATEUR',type:'freak',...P(16,13),
   st:{body:'#223a6a',phones:1,phone:1},
@@ -265,7 +266,29 @@ const NPCS=[
 ];
 function flirt(id,ok,no){return ()=>{const win=Math.random()<0.6;const n=NPCS.find(x=>x.id===id);
   if(win){if(!n.matched){n.matched=true;matchs++;}return ok;}return no;};}
-function deal(msg){return ()=>{woozyUntil=performance.now()/1000+16;toast('🌀 ça commence à tourner...','#b98aff');return msg;};}
+// --- consumables / energy ---
+let energy=100;        // 0..100
+let drunk=0;           // 0..100 (bière)
+let beers=0;           // compteur de bières
+function clampE(){energy=Math.max(0,Math.min(100,energy));drunk=Math.max(0,Math.min(100,drunk));}
+function buyBeer(){
+  beers++;energy+=14;drunk+=24;clampE();
+  toast('🍺 +énergie','#ffd24a');
+  if(drunk>60)return "Tu titubes un peu... (les contrôles flottent). Une eau ne ferait pas de mal.";
+  if(beers>=3)return "Troisième mousse. Le sol te paraît... accueillant. Santé !";
+  return "Bière tiède, bonheur chaud. Tu te sens regonflé.";
+}
+function buyWater(){
+  energy+=8;drunk=Math.max(0,drunk-40);woozyUntil=0;clampE();
+  toast('💧 lucidité +','#3ff0ff');
+  return "Ahh. L'eau, la vraie héroïne de la nuit. Tête plus claire.";
+}
+function buyDrug(){
+  energy=Math.min(100,energy+40);woozyUntil=performance.now()/1000+18;crashAt=performance.now()/1000+30;
+  toast('🌀 ça monte...','#b98aff');
+  return "« Vas-y MOLLO. Et BOIS DE L'EAU. Vraiment. » Les lumières deviennent... intéressantes.";
+}
+let crashAt=0;         // moment de redescente
 NPCS.forEach(n=>{n.bob=Math.random()*6.28;n.hx=n.x;n.hy=n.y;n.wt=0;n.found=false;});
 const friends=NPCS.filter(n=>n.type==='friend');
 let friendsFound=0, matchs=0;
@@ -383,6 +406,9 @@ function update(dt){
   for(const e of extras)e.bob+=dt*(e.dance?6:3);
   if(state==='play'){
     let dx=0,dy=0;if(keys.up)dy--;if(keys.down)dy++;if(keys.left)dx--;if(keys.right)dx++;
+    // ivresse : la direction flotte légèrement
+    if((dx||dy)&&drunk>35){const w=(drunk/100)*0.6;const a=Math.sin(now*3.3)*w;
+      const cs=Math.cos(a),sn=Math.sin(a);const ox=dx;dx=dx*cs-dy*sn;dy=ox*sn+dy*cs;}
     const swim=groundAt(player.x,player.y)===G_WATER;
     if(dx||dy){const l=Math.hypot(dx,dy);dx/=l;dy/=l;player.ang=Math.atan2(dy,dx);
       const sp=swim?60:78,rr=5;let nx=player.x+dx*sp*dt,ny=player.y+dy*sp*dt;
@@ -406,6 +432,17 @@ function update(dt){
     near=null;let best=30;for(const n of NPCS){const d=Math.hypot(n.x-player.x,n.y-player.y);if(d<best){best=d;near=n;}}
     if(confirmQueued&&near){dlg=near;line=0;phase='lines';sel=0;result='';state='dialogue';}
     if(woozyUntil>now&&Math.random()<dt*0.4)toast('💧 bois de l\'eau','#3ff0ff');
+    // --- énergie : descend avec la nuit ---
+    energy-=dt*0.85;
+    // dégrisage progressif
+    drunk=Math.max(0,drunk-dt*1.4);
+    // redescente après la drogue
+    if(crashAt&&now>crashAt){energy-=dt*6;if(energy<=30){crashAt=0;toast('😵 redescente... bois de l\'eau','#9a7ad8');}}
+    // boost passif : dancefloor + amis retrouvés regonflent un peu
+    if(curZone&&(curZone.n==='SCÈNE PRINCIPALE'||curZone.n==='SCÈNE SECONDAIRE')&&(keys.up||keys.down||keys.left||keys.right))energy+=dt*0.5;
+    clampE();
+    // épuisement : le temps file plus vite et on prévient
+    if(energy<=0){clock+=dt*8; if(Math.random()<dt*0.5)toast('⚡ épuisé — faut recharger !','#ff6a6a');}
   }
   else if(state==='dialogue'){
     if(confirmQueued){
@@ -424,13 +461,13 @@ function update(dt){
 }
 function closeDialogue(){
   const n=dlg;
-  if(n.type==='friend'&&!n.found){n.found=true;friendsFound++;clock+=18;toast('★ ami retrouvé : '+n.id.toUpperCase(),'#7aff7a');}
-  if(n.type==='freak'){clock+=40;toast('⏳ tu as perdu 40 minutes...','#ff8a5a');}
+  if(n.type==='friend'&&!n.found){n.found=true;friendsFound++;clock+=18;energy=Math.min(100,energy+12);toast('★ pote retrouvé : '+n.id.toUpperCase(),'#7aff7a');}
+  if(n.type==='freak'){clock+=40;energy=Math.max(0,energy-10);toast('⏳ tu as perdu 40 minutes...','#ff8a5a');}
   dlg=null;state='play';
   if(friendsFound>=friends.length){clock=6*60+12;state='win';}
 }
 function restart(){NPCS.forEach(n=>{n.found=false;n.matched=false;n.x=n.hx;n.y=n.hy;});
-  friendsFound=0;matchs=0;clock=90;woozyUntil=0;
+  friendsFound=0;matchs=0;clock=90;woozyUntil=0;energy=100;drunk=0;beers=0;crashAt=0;
   player.x=7*TILE+10;player.y=31*TILE+10;player.ang=-Math.PI/2;state='title';}
 
 /* ===================== DRAW HELPERS ===================== */
@@ -601,12 +638,23 @@ function hud(){
   if(VW>=235)txt('BERGFISCH',6,top+12,'#ff3fae',11,true);
   txt(fmtClock(),VW/2,top+12,'#efe3c0',11,true,'center');
   txt('♥ '+matchs,VW-6,top+12,'#ff3fae',10,true,'right');
+  // jauge d'énergie (sous l'heure, centrée)
+  const bw2=Math.min(120,VW*0.34),bx3=VW/2-bw2/2,by3=top+19;
+  px(bx3-1,by3-1,bw2+2,8,'rgba(0,0,0,.55)');
+  const ecol=energy>50?'#7aff7a':energy>22?'#ffd24a':'#ff5a5a';
+  px(bx3,by3,Math.max(0,bw2*energy/100),6,ecol);
+  px(bx3,by3,bw2,1,'rgba(255,255,255,.18)');
+  txt('⚡',bx3-10,by3+7,'#ffd24a',9,true,'right');
+  // état (ivre / planant)
+  let badge='';if(woozyUntil>performance.now()/1000)badge='🌀';else if(drunk>35)badge='🍺';
+  if(badge)txt(badge,bx3+bw2+12,by3+7,'#fff',11,true,'center');
+  // liste objectifs
   const ow=Math.min(150,VW-12);
-  px(6,top+20,ow,14+friends.length*12,'rgba(20,16,8,.55)');
-  txt('TROUVE TES POTES',12,top+32,'#3ff0ff',10,true);
+  px(6,top+30,ow,14+friends.length*12,'rgba(20,16,8,.55)');
+  txt('TROUVE TES POTES',12,top+42,'#3ff0ff',10,true);
   friends.forEach((f,i)=>{const nm=f.id.charAt(0).toUpperCase()+f.id.slice(1);
-    txt((f.found?'☑ ':'☐ ')+nm,12,top+46+i*12,f.found?'#7aff7a':'#cfc4a0',10,f.found);});
-  if(near&&state==='play'){const lbl=(isTouch?'OK ':'[E] ')+(near.type==='dealer'?'Aborder':near.type==='freak'?'(éviter ?)':'Parler');
+    txt((f.found?'☑ ':'☐ ')+nm,12,top+56+i*12,f.found?'#7aff7a':'#cfc4a0',10,f.found);});
+  if(near&&state==='play'){const lbl=(isTouch?'OK ':'[E] ')+(near.type==='dealer'?'Acheter':near.type==='bar'?'Commander':near.type==='freak'?'(éviter ?)':'Parler');
     ctx.font="bold 10px 'Courier New',monospace";const w=ctx.measureText(lbl).width;
     const bx2=near.x-cam.x-w/2-6,by2=near.y-cam.y-30;
     px(bx2,by2,w+12,15,'rgba(216,200,160,.95)');px(bx2,by2,w+12,2,'#efe3c0');px(bx2,by2+13,w+12,2,'#a8966c');
@@ -662,9 +710,17 @@ function overlays(){const now=performance.now()/1000;
   // sauna steam
   if(curZone&&curZone.n==='SAUNA'){ctx.fillStyle='rgba(235,235,235,'+(0.28+0.06*Math.sin(now*2))+')';ctx.fillRect(0,16,VW,VH-16);
     for(let i=0;i<6;i++){const sx=(i*90+now*20)%VW;ctx.fillStyle='rgba(255,255,255,.18)';ctx.beginPath();ctx.arc(sx,VH-40-Math.sin(now+i)*20,30,0,6.283);ctx.fill();}}
-  // woozy
-  if(woozyUntil>now){const k=Math.min(1,(woozyUntil-now)/16);
-    ctx.fillStyle='rgba(150,60,220,'+(0.10*k)+')';ctx.fillRect(0,0,VW,VH);}
+  // woozy (drogue) : teinte qui pulse + halo coloré
+  if(woozyUntil>now){const k=Math.min(1,(woozyUntil-now)/18);const t=now;
+    ctx.fillStyle='rgba(150,60,220,'+(0.12*k)+')';ctx.fillRect(0,0,VW,VH);
+    ctx.globalCompositeOperation='lighter';
+    const hue=(t*80)%360;ctx.fillStyle='hsla('+hue+',90%,55%,'+(0.05*k)+')';ctx.fillRect(0,0,VW,VH);
+    ctx.globalCompositeOperation='source-over';}
+  // ivresse (bière) : léger voile ondulant haut/bas
+  if(drunk>35){const k=Math.min(1,(drunk-35)/65);
+    const a=0.18*k+0.05*Math.sin(now*2);
+    ctx.fillStyle='rgba(180,140,40,'+Math.max(0,a*0.4)+')';
+    ctx.fillRect(0,0,VW,6);ctx.fillRect(0,VH-6,VW,6);}
   // photobooth flash
   if(flashUntil>now){ctx.fillStyle='rgba(255,255,255,'+Math.min(1,(flashUntil-now)/0.35)+')';ctx.fillRect(0,0,VW,VH);}
   // polaroid
